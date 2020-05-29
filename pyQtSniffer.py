@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QGridLayout, QMainWindow, QLabel, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout  
+from PyQt5.QtWidgets import QApplication, QGridLayout, QMainWindow, QLabel, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout ,QHBoxLayout,QGroupBox
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot, QSize, Qt
 from PyQt5 import QtGui
@@ -81,62 +81,104 @@ def format_output_line(prefix, string, size=80):
 
 
 class MyWindow(QMainWindow):
+    
     def __init__(self):
+        
         super(MyWindow,self).__init__()
+        
         self.initUI()
- 
+    
 
     def initUI(self):
-        self.setGeometry(0,0,1500,1000)
-        self.setWindowTitle("Tech With Tim")
-        self.label = QtWidgets.QLabel(self)
-        self.label.setText("my first label!")
-        self.label.move(50,50)
-        self.tabb()
+        #self.setGeometry(0,0,1500,1000)
+        #self.setWindowTitle("Tech With Tim")
+        self.w = QtWidgets.QWidget()
+
+        self.v_box = QtWidgets.QVBoxLayout()
+        #self.h_box=QtWidgets.QHBoxLayout()
+
+
+        #self.label = QtWidgets.QLabel(self)
+        #self.label.setText("my first label!")
+
+
         self.b1 = QtWidgets.QPushButton(self)
-        self.b1.setText("click me!")
+        self.b1.setText("Start sniffing !")
         self.b1.clicked.connect(self.sniffer)
-       
+        self.tabb()
+        self.table.cellClicked.connect(self.cell_was_clicked) 
+        
+        self.v_box.addWidget(self.b1)
+        #self.h_box.addStretch()
+        self.v_box.addWidget(self.table)
+        #self.h_box.addStretch()
+
+
+        #self.v_box.addLayout(self.h_box)
+
+        self.w.setLayout(self.v_box)
+        self.w.resize(500,500)
+        self.w.show()
 
     def tabb(self):
-        central_widget = QWidget(self)              # Create a central widget
-        self.setCentralWidget(central_widget)       # Install the central widget
-        grid_layout = QGridLayout(self)         # Create QGridLayout
-        central_widget.setLayout(grid_layout)   # Set this layout in central widget
- 
-        self.table = QTableWidget(self)  # Create a table
-        self.table.setColumnCount(3)     #Set three columns
+
+
+        self.table = QtWidgets.QTableWidget(self)  # Create a table
+        self.table.setColumnCount(4)     #Set three columns
         self.table.setRowCount(0)        # and one row
+        # Do the resize of the columns by content
+
+        #self.table.resizeRowsToContents()
  
         # Set the table headers
-        self.table.setHorizontalHeaderLabels(["DestMAC", "SrcMAC", "SrcIP"])
+        self.table.setHorizontalHeaderLabels(["DestMAC", "SrcMAC", "SrcIP", "type"])
 
         #Set the tooltips to headings
         self.table.horizontalHeaderItem(0).setToolTip("Column 1 ")
         self.table.horizontalHeaderItem(1).setToolTip("Column 2 ")
         self.table.horizontalHeaderItem(2).setToolTip("Column 3 ")
- 
+        self.table.horizontalHeaderItem(3).setToolTip("Column 4 ")
+
+
+        self.table.resize(self.width(),self.height())
         # Set the alignment to the headers
-        self.table.horizontalHeaderItem(0).setTextAlignment(Qt.AlignLeft)
-        self.table.horizontalHeaderItem(1).setTextAlignment(Qt.AlignHCenter)
-        self.table.horizontalHeaderItem(2).setTextAlignment(Qt.AlignRight)
+        #self.table.horizontalHeaderItem(0).setTextAlignment(Qt.AlignLeft)
+        #self.table.horizontalHeaderItem(1).setTextAlignment(Qt.AlignHCenter)
+        #self.table.horizontalHeaderItem(2).setTextAlignment(Qt.AlignRight)
+
+
+    def cell_was_clicked(self):
+        print("////////cell_was_clicked/////////////")
+        row = self.table.currentItem().row()
+        print (row)
+        col = self.table.currentItem().column()
+        print (col)
+        self.item = self.table.horizontalHeaderItem(col).text()
+        print (self.item)
+        self.value = self.table.item(row, col).text()
+        print (self.value)
+        return self.item
  
 
-        # Do the resize of the columns by content
-        self.table.resizeColumnsToContents()
+
+
  
-        grid_layout.addWidget(self.table, 0, 0)   # Adding the table to the grid
+
 
 
     def sniffer(self):
+        #self.table.resizeColumnsToContents()
+        #self.table.resizeRowsToContents()
         conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
         count = 0
         maxi = 2
         while (count < maxi):
+ 
+            #print(self.w.tableWidget.item(self.w.tableWidget.currentRow(),count ))          
             self.table.insertRow(count)
             raw_data, addr = conn.recvfrom(65536)
             dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
-            self.label.setText(dest_mac)
+            #self.label.setText(dest_mac)
             #self.label.setText(" Ethernet Frame: ")
             print('\n Ethernet Frame: ')
             print(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
@@ -160,6 +202,7 @@ class MyWindow(QMainWindow):
                     print(TAB_2 + 'Type: {}, Code: {}, Checksum: {},'.format(icmp_type, code, checksum))
                     print(TAB_2 + 'ICMP Data:')
                     print(format_output_line(DATA_TAB_3, data))
+                    self.table.setItem(count, 3, QTableWidgetItem("ICMPpacket"))
 
                 # TCP
                 elif proto == 6:
@@ -171,16 +214,18 @@ class MyWindow(QMainWindow):
                     print(TAB_2 + 'Flags:')
                     print(TAB_3 + 'URG: {}, ACK: {}, PSH: {}'.format(flag_urg, flag_ack, flag_psh))
                     print(TAB_3 + 'RST: {}, SYN: {}, FIN:{}'.format(flag_rst, flag_syn, flag_fin))
-
+                    self.table.setItem(count, 3, QTableWidgetItem("TCPpacket"))
                     if len(data) > 0:
                         # HTTP
                         if src_port == 80 or dest_port == 80:
                             print(TAB_2 + 'HTTP Data:')
+                            self.table.setItem(count, 3, QTableWidgetItem("TCP-HTTPpacket"))
                             try:
                                 http = HTTP(data)
                                 http_info = str(http.data).split('\n')
                                 for line in http_info:
                                     print(DATA_TAB_3 + str(line))
+
                             except:
                                 print(format_output_line(DATA_TAB_3, data))
                         else:
@@ -188,6 +233,7 @@ class MyWindow(QMainWindow):
                             print(format_output_line(DATA_TAB_3, data))
                 # UDP
                 elif proto == 17:
+                    self.table.setItem(count, 3, QTableWidgetItem("UDPpacket"))
                     src_port, dest_port, length, data = udp_seg(data)
                     print(TAB_1 + 'UDP Segment:')
                     print(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
@@ -196,23 +242,23 @@ class MyWindow(QMainWindow):
                 else:
                     print(TAB_1 + 'Other IPv4 Data:')
                     print(format_output_line(DATA_TAB_2, data))
+                    self.table.setItem(count, 3, QTableWidgetItem("null"))
 
             else:
+                self.table.setItem(count, 3, QTableWidgetItem("other"))
                 print('Ethernet Data:')
                 print(format_output_line(DATA_TAB_1, data))
             print('counter is :   ')
             print(count)
             count = count +1
-        self.update()
 
-    def update(self):
-        self.label.adjustSize()
 
 
 def window():
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     win = MyWindow()
     win.show()
     sys.exit(app.exec_())
 
-window()
+if __name__ == '__main__':
+     window()
