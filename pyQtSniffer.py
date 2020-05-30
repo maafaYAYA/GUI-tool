@@ -1,9 +1,10 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QGridLayout, QMainWindow, QLabel, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout ,QHBoxLayout,QGroupBox
+from PyQt5.QtWidgets import QMessageBox, QApplication, QGridLayout, QMainWindow, QLabel, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout ,QHBoxLayout,QGroupBox
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot, QSize, Qt
 from PyQt5 import QtGui
 
+import ipinfo
 import sys
 import socket
 import struct
@@ -117,7 +118,7 @@ class MyWindow(QMainWindow):
         #self.v_box.addLayout(self.h_box)
 
         self.w.setLayout(self.v_box)
-        self.w.resize(500,500)
+        self.w.resize(437,600)
         self.w.show()
 
     def tabb(self):
@@ -153,11 +154,38 @@ class MyWindow(QMainWindow):
         print (row)
         col = self.table.currentItem().column()
         print (col)
+        #print (type(col))
         self.item = self.table.horizontalHeaderItem(col).text()
         print (self.item)
         self.value = self.table.item(row, col).text()
         print (self.value)
-        return self.item
+        print(type(self.value))
+        if self.item == "SrcIP":
+            #print("acc tocken yaya   is      9b13288fba4a13")
+            #https://ipinfo.io/account/search?query=8.8.8.8
+
+            access_token = '9b13288fba4a13'
+            handler = ipinfo.getHandler(access_token)
+            ip_address = self.value
+            details = handler.getDetails(ip_address)
+            print(type(details.city))
+
+            print(details.region)
+            #print(details.hostname)
+            #print(details.postal)
+            msg = QMessageBox()
+            msg.setWindowTitle("More detail")
+            msg.setIcon(QMessageBox.Information)
+            msg.setText(details.city  + details.region)
+            x = msg.exec_()
+        else:
+            msg = QMessageBox()
+            msg.setWindowTitle("More detail")
+            msg.setIcon(QMessageBox.Information)
+            msg.setText(self.value)
+            x = msg.exec_()
+
+
  
 
 
