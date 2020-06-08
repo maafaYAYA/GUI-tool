@@ -4,17 +4,21 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot, QSize, Qt
 from PyQt5 import QtGui
 
+from IPy import IP
 import ipinfo
 import sys
 import socket
 import struct
 import textwrap
+import urllib.request as urllib2
+import json
+import codecs
 
 TAB_1 = '\t - '
 TAB_2 = '\t\t - '
 TAB_3 = '\t\t\t - '
 TAB_4 = '\t\t\t\t - '
-
+L = '\n'
 DATA_TAB_1 = '\t   '
 DATA_TAB_2 = '\t\t   '
 DATA_TAB_3 = '\t\t\t   '
@@ -91,16 +95,11 @@ class MyWindow(QMainWindow):
     
 
     def initUI(self):
-        #self.setGeometry(0,0,1500,1000)
-        #self.setWindowTitle("Tech With Tim")
+
         self.w = QtWidgets.QWidget()
 
         self.v_box = QtWidgets.QVBoxLayout()
-        #self.h_box=QtWidgets.QHBoxLayout()
 
-
-        #self.label = QtWidgets.QLabel(self)
-        #self.label.setText("my first label!")
 
 
         self.b1 = QtWidgets.QPushButton(self)
@@ -110,27 +109,25 @@ class MyWindow(QMainWindow):
         self.table.cellClicked.connect(self.cell_was_clicked) 
         
         self.v_box.addWidget(self.b1)
-        #self.h_box.addStretch()
+
         self.v_box.addWidget(self.table)
-        #self.h_box.addStretch()
+
 
 
         #self.v_box.addLayout(self.h_box)
 
         self.w.setLayout(self.v_box)
         self.w.resize(437,600)
+        
         self.w.show()
 
     def tabb(self):
 
 
         self.table = QtWidgets.QTableWidget(self)  # Create a table
-        self.table.setColumnCount(4)     #Set three columns
-        self.table.setRowCount(0)        # and one row
-        # Do the resize of the columns by content
+        self.table.setColumnCount(4)     #Set 4 columns
+        self.table.setRowCount(0)        
 
-        #self.table.resizeRowsToContents()
- 
         # Set the table headers
         self.table.setHorizontalHeaderLabels(["DestMAC", "SrcMAC", "SrcIP", "type"])
 
@@ -161,38 +158,92 @@ class MyWindow(QMainWindow):
         print (self.value)
         print(type(self.value))
         if self.item == "SrcIP":
-            #print("acc tocken yaya   is      9b13288fba4a13")
-            #https://ipinfo.io/account/search?query=8.8.8.8
-
-            access_token = '9b13288fba4a13'
-            handler = ipinfo.getHandler(access_token)
-            ip_address = self.value
-            details = handler.getDetails(ip_address)
-            print(type(details.city))
-
-            print(details.region)
-            #print(details.hostname)
-            #print(details.postal)
+            #test public or privet ip 
+            ip = IP(self.value)
+            print(ip.iptype())
+            #depend on the output choose if public ==more detail else iptype output shown 
+            if ip.iptype() == "PUBLIC": #public address 
+                #print("acc tocken yaya   is      9b13288fba4a13")
+                #https://ipinfo.io/account/search?query=8.8.8.8
+                access_token = '9b13288fba4a13'
+                handler = ipinfo.getHandler(access_token)
+                ip_address = self.value
+                details = handler.getDetails(ip_address)
+                print(type(details.city))
+                print(details.region)
+                
+                msg = QMessageBox()
+                msg.setWindowTitle("More detail")
+                msg.setIcon(QMessageBox.Information)               
+                msg.setText('Ip:   '+str(details.ip)+L+'City:   '+str(details.city) +L+'Region:   '+str(details.region)+L+'Country:   '+str(details.country)+L+'Organization:   '+str(details.org)+L+'Location:   '+str(details.loc)+L+'Postal:   '+str(details.postal)+L+'Timezone:   '+str(details.timezone))
+                
+                x = msg.exec_()
+                
+            else:#privet or loopback  ip addss
+                msg = QMessageBox()
+                msg.setWindowTitle("More detail")
+                msg.setIcon(QMessageBox.Information)
+                msg.setText(ip.iptype())
+                
+                x = msg.exec_() 
+        elif self.item == "type":#type of the packet  inner window info by classification 
+                                 #self.d =>data non dcrpted
             msg = QMessageBox()
             msg.setWindowTitle("More detail")
             msg.setIcon(QMessageBox.Information)
-            msg.setText(details.city  + details.region)
-            x = msg.exec_()
-        else:
-            msg = QMessageBox()
-            msg.setWindowTitle("More detail")
-            msg.setIcon(QMessageBox.Information)
-            msg.setText(self.value)
-            x = msg.exec_()
+            print (self.d)
+            print(type(self.d))
+            
+            
+            if str(self.value) == "ICMPpacket" :
+                msg.setText(self.value+L+'Checksum :      '+str(self.chck)+L+'ICMP Code :      '+str(self.cd)+L+'ICMP Type :      '+str(self.t))
+                #msg.setInformativeText(str(self.d))
+                msg.setDetailedText('data :      '+str(self.d))
 
+            elif str(self.value) == "TCPpacket" :
+                msg.setText(self.value+L+'Source Port :      '+str(self.srcP)+L+'Destination Port:      '+str(self.destP)+L+'Sequence Number :      '+str(self.seq)+L+'Acknowledgment :      '+str(self.ack))
+                msg.setDetailedText('Data :      '+str(self.d))
 
+            elif str(self.value) == "TCP-HTTPpacket" :
+                msg.setText(self.value+L+'Source Port :      '+str(self.srcP)+L+'Destination Port:      '+str(self.destP)+L+'Sequence Number :      '+str(self.seq)+L+'Acknowledgment :      '+str(self.ack))
+                msg.setDetailedText(+'Data :      '+str(self.d))
+
+            elif str(self.value) == "UDPpacket" :
+                msg.setText(self.value+L+'Source Port:      '+str(self.srcP)+L+'Destination Port:      '+str(self.destP)+L+'Length:      '+str(self.len))
+                msg.setDetailedText('Data:      '+str(self.d))
+            
+            else:
+                msg.setText(self.value)
+                msg.setDetailedText('Data:      '+str(self.d))
+
+            x = msg.exec_()            
+
+        else:#mac address inner window info by classification 
+            if self.value=="00:00:00:00:00:00":
+
+                msg = QMessageBox()
+                msg.setWindowTitle("More detail")
+                msg.setIcon(QMessageBox.Information)
+                
+                msg.setText(self.value +L+"ARP request")
+                x = msg.exec_()
+            elif self.value=="FF:FF:FF:FF:FF:FF":
  
-
-
-
- 
-
-
+                msg = QMessageBox()
+                msg.setWindowTitle("More detail")
+                msg.setIcon(QMessageBox.Information)
+                
+                msg.setText(self.value +L+"Broadcast MAC address")
+                x = msg.exec_()
+            else :
+                
+                self.macinfo(self.value)
+                msg = QMessageBox()
+                msg.setWindowTitle("More detail")
+                msg.setIcon(QMessageBox.Information)
+                msg.setText(self.value+L+'Address:      '+self.macaddress+L+'Company:      '+self.maccompany+L+'Start_hex:      '+self.macstart_hex+L+'End_hex:      '+self.macend_hex+L+'Type:      '+self.mactype)
+                x = msg.exec_()
+# sniffer function - create socket connect it end get data bytes - fragment -                
 
     def sniffer(self):
         #self.table.resizeColumnsToContents()
@@ -200,18 +251,14 @@ class MyWindow(QMainWindow):
         conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
         count = 0
         maxi = 2
-        while (count < maxi):
- 
-            #print(self.w.tableWidget.item(self.w.tableWidget.currentRow(),count ))          
+        while (count < maxi):         
             self.table.insertRow(count)
             raw_data, addr = conn.recvfrom(65536)
             dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
-            #self.label.setText(dest_mac)
-            #self.label.setText(" Ethernet Frame: ")
+
             print('\n Ethernet Frame: ')
             print(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
-            #add ethernet item into the table dest_mac, src_mac, eth_proto
-                    # Fill the first line
+            
             self.table.setItem(count, 0, QTableWidgetItem(dest_mac))
             self.table.setItem(count, 1, QTableWidgetItem(src_mac))
             
@@ -221,7 +268,7 @@ class MyWindow(QMainWindow):
                 print(TAB_1 + "IPV4 Packet:")
                 print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
                 print(TAB_3 + 'protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
-                #add ethernet item into the table version, header_length, ttl, proto, src, target, 
+                
                 self.table.setItem(count, 2, QTableWidgetItem(src))
                 # ICMP
                 if proto == 1:
@@ -230,6 +277,11 @@ class MyWindow(QMainWindow):
                     print(TAB_2 + 'Type: {}, Code: {}, Checksum: {},'.format(icmp_type, code, checksum))
                     print(TAB_2 + 'ICMP Data:')
                     print(format_output_line(DATA_TAB_3, data))
+                    self.d = data
+                    self.t = icmp_type
+                    self.chck = checksum
+                    self.cd = code 
+
                     self.table.setItem(count, 3, QTableWidgetItem("ICMPpacket"))
 
                 # TCP
@@ -242,6 +294,11 @@ class MyWindow(QMainWindow):
                     print(TAB_2 + 'Flags:')
                     print(TAB_3 + 'URG: {}, ACK: {}, PSH: {}'.format(flag_urg, flag_ack, flag_psh))
                     print(TAB_3 + 'RST: {}, SYN: {}, FIN:{}'.format(flag_rst, flag_syn, flag_fin))
+                    self.srcP = src_port
+                    self.destP = dest_port
+                    self.seq = sequence
+                    self.ack = acknowledgment
+                    
                     self.table.setItem(count, 3, QTableWidgetItem("TCPpacket"))
                     if len(data) > 0:
                         # HTTP
@@ -253,33 +310,74 @@ class MyWindow(QMainWindow):
                                 http_info = str(http.data).split('\n')
                                 for line in http_info:
                                     print(DATA_TAB_3 + str(line))
+                                    ####### data as list of lines !!!!!!!1
 
                             except:
                                 print(format_output_line(DATA_TAB_3, data))
+                                self.d = data
                         else:
                             print(TAB_2 + 'TCP Data:')
                             print(format_output_line(DATA_TAB_3, data))
+                            self.d = data
                 # UDP
                 elif proto == 17:
                     self.table.setItem(count, 3, QTableWidgetItem("UDPpacket"))
                     src_port, dest_port, length, data = udp_seg(data)
+                    self.d = data
                     print(TAB_1 + 'UDP Segment:')
                     print(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
+                    self.srcP = src_port
+                    self.destP = dest_port
+                    self.len = length
+                    
 
                 # Other IPv4
                 else:
                     print(TAB_1 + 'Other IPv4 Data:')
                     print(format_output_line(DATA_TAB_2, data))
+                    self.d = data
                     self.table.setItem(count, 3, QTableWidgetItem("null"))
 
             else:
                 self.table.setItem(count, 3, QTableWidgetItem("other"))
                 print('Ethernet Data:')
                 print(format_output_line(DATA_TAB_1, data))
+                self.d = data
             print('counter is :   ')
             print(count)
             count = count +1
+#function that return mac address info 
+    def macinfo(self,mc):
+        #API base url,you can also use https if you need
+        url = "http://macvendors.co/api/"
+        #Mac address to lookup vendor from
+        mac_address = mc
+        request = urllib2.Request(url+mac_address, headers={'User-Agent' : "API Browser"}) 
+        response = urllib2.urlopen( request )
+        #Fix: json object must be str, not 'bytes'
+        reader = codecs.getreader("utf-8")
+        obj = json.load(reader(response))
 
+        #Print company name
+        #print (obj['result']['company']+"<br/>");
+        #print company address
+        #print (obj['result']['address']);
+        #print('test MAC INFO output')
+        #print (type(obj['result']))
+        #print (obj['result'])
+        
+        self.maccompany = obj['result']['company']
+        self.macaddress = obj['result']['address']
+        self.macstart_hex = obj['result']['start_hex']
+        self.macend_hex = obj['result']['end_hex']
+        self.maccountry = obj['result']['country']
+        self.mactype =  obj['result']['type']
+        #print(type(self.macaddress))
+        #return info as list 
+
+        return ['result']
+
+       
 
 
 def window():
